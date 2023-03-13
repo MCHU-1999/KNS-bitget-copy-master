@@ -1,0 +1,1 @@
+# KNS-bitget-copy-master
