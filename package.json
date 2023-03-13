@@ -1,0 +1,23 @@
+{
+  "name": "kns-bitget-copy-master",
+  "version": "1.0.0",
+  "description": "A discord bot that replies bitget trader performance",
+  "main": "index.js",
+  "scripts": {
+    "test": "nodemon dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MCHU-1999/KNS-bitget-copy-master.git"
+  },
+  "author": "MCHU",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/MCHU-1999/KNS-bitget-copy-master/issues"
+  },
+  "homepage": "https://github.com/MCHU-1999/KNS-bitget-copy-master#readme",
+  "dependencies": {
+    "discord.js": "^14.8.0",
+    "dotenv": "^16.0.3"
+  }
+}
