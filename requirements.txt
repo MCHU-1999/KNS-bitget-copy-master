@@ -3,3 +3,4 @@ numpy
 matplotlib
 discord.py
 python-dotenv
+gunicorn
