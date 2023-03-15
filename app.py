@@ -5,6 +5,7 @@ from discord.ext import commands
 from discord import app_commands
 import traceback
 import util
+import keep_alive
 
 load_dotenv() 
 token = os.getenv('TOKEN')
@@ -33,15 +34,15 @@ class menuView(discord.ui.View):
 class simulate(discord.ui.Modal, title='交易員實盤績效查詢&試算'):
     traderLink = discord.ui.TextInput(
         label = 'bitget交易員連結',
-        placeholder = '輸入網址'
+        placeholder = '輸入網址（或ID）'
     )
     margin = discord.ui.TextInput(
         label = '開倉大小',
-        placeholder = '每倉保證金（USDT）'
+        placeholder = '每倉保證金（USDT）ex:10'
     )
     lossPerPos = discord.ui.TextInput(
         label = '倉位止損',
-        placeholder = '自訂倉位止損（％）'
+        placeholder = '自訂倉位止損（％）ex:100'
     )
     month = discord.ui.TextInput(
         label = '試算時間段',
@@ -50,10 +51,10 @@ class simulate(discord.ui.Modal, title='交易員實盤績效查詢&試算'):
 
     async def on_submit(self, interaction: discord.Interaction):
         # print(self.traderLink)
-        resData = await util.copySimulate(str(self.traderLink).split('?id=')[1], int(str(self.margin)), int(str(self.lossPerPos)), str(self.month))
+        resData = util.copySimulate(str(self.traderLink).split('?id=')[1], int(str(self.margin)), int(str(self.lossPerPos)), str(self.month))
         # print(resData)
         # print("交易員：" + resData["traderName"])
-        file = discord.File("./oneAndOnly.png", filename="image.png")
+        file = discord.File(f'./{ resData["filename"] }', filename="image.png")
         embed = discord.Embed(
             title = str(self.month) + "月收益試算",
             type = "rich",
@@ -66,6 +67,7 @@ class simulate(discord.ui.Modal, title='交易員實盤績效查詢&試算'):
         .add_field(name="總收益（無爆倉）", value=f'{ resData["copyProfit"] }USDT', inline=False)\
         .set_image(url="attachment://image.png")
         await interaction.response.send_message(file = file, embed = embed, ephemeral = True)
+        os.remove(f'{ resData["filename"] }')
 
     async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
         await interaction.response.send_message('Oops! Something went wrong.', ephemeral = True)
@@ -76,15 +78,15 @@ class simulate(discord.ui.Modal, title='交易員實盤績效查詢&試算'):
 class analyze(discord.ui.Modal, title='交易員風險與回撤試算'):
     traderLink = discord.ui.TextInput(
         label = 'bitget交易員連結',
-        placeholder = '輸入網址'
+        placeholder = '輸入網址（或ID）'
     )
     initialCapital = discord.ui.TextInput(
         label = '本金',
-        placeholder = '跟單資金（USDT）'
+        placeholder = '總資金（USDT）ex:10000'
     )
     maxLossPercent = discord.ui.TextInput(
         label = '最大回撤',
-        placeholder = '可承受之最大回撤（％）'
+        placeholder = '可承受之最大回撤（％）ex:20'
     )
     month = discord.ui.TextInput(
         label = '試算時間段',
@@ -93,7 +95,7 @@ class analyze(discord.ui.Modal, title='交易員風險與回撤試算'):
 
     async def on_submit(self, interaction: discord.Interaction):
         # print(self.traderLink)
-        resData = await util.analyzeTraderMDD(str(self.traderLink).split('?id=')[1], int(str(self.initialCapital)), int(str(self.maxLossPercent)), str(self.month))
+        resData = util.analyzeTraderMDD(str(self.traderLink).split('?id=')[1], int(str(self.initialCapital)), int(str(self.maxLossPercent)), str(self.month))
         # print(resData)
         # print("交易員：" + resData["traderName"])
         embed = discord.Embed(
@@ -163,5 +165,5 @@ bot = CopyBot()
 async def ping(ctx):
     await ctx.response.send_message("pong!")
 
-
+keep_alive.keep_alive()
 bot.run(token)

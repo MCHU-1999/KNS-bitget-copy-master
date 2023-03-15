@@ -25,7 +25,7 @@ monthMap = {
     "12": "31",
 }
 
-async def copySimulate(traderId, margin = 10, lossPerPosition = 100, month = "2023-02"):
+def copySimulate(traderId, margin = 10, lossPerPosition = 100, month = "2023-02"):
     load_dotenv()
     client = pymongo.MongoClient(os.getenv('MONGODB'))
     drawdownDB = client.TraderDrawdown.traderDrawdown
@@ -86,7 +86,7 @@ async def copySimulate(traderId, margin = 10, lossPerPosition = 100, month = "20
                 pass
             else:
                 y.append(pnlInDays[i] + y[i - 1])
-        plot.plotLine(x, y, month.split('-')[1])
+        filename = plot.plotLine(x, y, month.split('-')[1])
         # ------------------------------------------
 
         return {
@@ -97,6 +97,7 @@ async def copySimulate(traderId, margin = 10, lossPerPosition = 100, month = "20
             "copyProfit": round(copyProfit, 2),     # 跟單收益
             "suggestCapital": suggestCapital,       # 建議本金
             "countSL": countSL,                     # 共計止損？次
+            "filename": filename,                   # 圖表檔案名稱
         }
     
 
@@ -123,7 +124,7 @@ def potentialExtremeMaxDrawdown(drawdownData, turns):
     return potentialMaxDrawdown
 
 
-async def analyzeTraderMDD(traderId, initialCapital = 10000, maxLossPercent = 20, month = "2023-02"):
+def analyzeTraderMDD(traderId, initialCapital = 10000, maxLossPercent = 20, month = "2023-02"):
     # Initialize
     load_dotenv()
     client = pymongo.MongoClient(os.getenv('MONGODB'))
@@ -255,79 +256,70 @@ async def analyzeTraderMDD(traderId, initialCapital = 10000, maxLossPercent = 20
 
 
 # My handmade function: FAILED
-def calcMaxMDD(traderId):
-    load_dotenv()
-    client = pymongo.MongoClient(os.getenv('MONGODB'))
-    drawdownDB = client.TraderDrawdown.traderDrawdown
+# def calcMaxMDD(traderId):
+#     load_dotenv()
+#     client = pymongo.MongoClient(os.getenv('MONGODB'))
+#     drawdownDB = client.TraderDrawdown.traderDrawdown
 
-    traderData = drawdownDB.find({"traderId": traderId})
-    traderData = (list(traderData)[0])
-    # print(traderData)
-    if len(traderData) == 0 :
-        hasDrawdownData = False
-        # print('Cannot find trader data in DB.')
-        return False
-    else:
-        positionCount = 0
-        positions = []
-        suggestCapital = 0.00
-        startTimestamp = int(time.mktime(time.strptime(f"2023-02-20 00:00:00", "%Y-%m-%d %H:%M:%S"))) + 3600*8
-        endTimestamp = int(time.mktime(time.strptime(f"2023-03-10 23:59:59", "%Y-%m-%d %H:%M:%S"))) + 3600*8
-        hasDrawdownData = True
-        history = traderData["history"]
+#     traderData = drawdownDB.find({"traderId": traderId})
+#     traderData = (list(traderData)[0])
+#     # print(traderData)
+#     if len(traderData) == 0 :
+#         hasDrawdownData = False
+#         # print('Cannot find trader data in DB.')
+#         return False
+#     else:
+#         positionCount = 0
+#         positions = []
+#         suggestCapital = 0.00
+#         startTimestamp = int(time.mktime(time.strptime(f"2023-02-20 00:00:00", "%Y-%m-%d %H:%M:%S"))) + 3600*8
+#         endTimestamp = int(time.mktime(time.strptime(f"2023-03-10 23:59:59", "%Y-%m-%d %H:%M:%S"))) + 3600*8
+#         hasDrawdownData = True
+#         history = traderData["history"]
 
-        for each in history:
-            openTimestamp = int(time.mktime(time.strptime(each["openDate"], "%Y-%m-%d %H:%M:%S")))
-            closeTimestamp = int(time.mktime(time.strptime(each["closeDate"], "%Y-%m-%d %H:%M:%S")))
-            leverage = each["leverage"]
-            drawdown = each["drawdown"]
-            if startTimestamp <= openTimestamp and closeTimestamp <= endTimestamp:
-                # print(f'{openTimestamp}, {closeTimestamp}')
-                positions.append({
-                    "openTimestamp": openTimestamp,
-                    "closeTimestamp": closeTimestamp,
-                    "drawdown": drawdown,
-                    "overlapPos": []
-                })
+#         for each in history:
+#             openTimestamp = int(time.mktime(time.strptime(each["openDate"], "%Y-%m-%d %H:%M:%S")))
+#             closeTimestamp = int(time.mktime(time.strptime(each["closeDate"], "%Y-%m-%d %H:%M:%S")))
+#             leverage = each["leverage"]
+#             drawdown = each["drawdown"]
+#             if startTimestamp <= openTimestamp and closeTimestamp <= endTimestamp:
+#                 # print(f'{openTimestamp}, {closeTimestamp}')
+#                 positions.append({
+#                     "openTimestamp": openTimestamp,
+#                     "closeTimestamp": closeTimestamp,
+#                     "drawdown": drawdown,
+#                     "overlapPos": []
+#                 })
 
-        overlap = np.zeros((len(positions), len(positions)), dtype="int_")
-        for i in range(len(positions)):
-            for j in range(len(positions)):
-                if positions[i]["openTimestamp"] < positions[j]["closeTimestamp"] :
-                    overlap[i][j] = 1
-                else :
-                    overlap[i][j] = 0
+#         overlap = np.zeros((len(positions), len(positions)), dtype="int_")
+#         for i in range(len(positions)):
+#             for j in range(len(positions)):
+#                 if positions[i]["openTimestamp"] < positions[j]["closeTimestamp"] :
+#                     overlap[i][j] = 1
+#                 else :
+#                     overlap[i][j] = 0
 
-        for i in range(len(positions)):
-            for j in range(len(positions)):
-                if overlap[i][j] != overlap[j][i]:
-                    overlap[i][j] = 0
-                    overlap[j][i] = 0
-                elif overlap[i][j] == 1 and overlap[j][i] == 1:
-                    positions[i]["overlapPos"].append(j)
-                    pass
+#         for i in range(len(positions)):
+#             for j in range(len(positions)):
+#                 if overlap[i][j] != overlap[j][i]:
+#                     overlap[i][j] = 0
+#                     overlap[j][i] = 0
+#                 elif overlap[i][j] == 1 and overlap[j][i] == 1:
+#                     positions[i]["overlapPos"].append(j)
+#                     pass
 
-        print(positions[64])
-        # print(overlap)
-        print(positions[256])
+#         print(positions[64])
+#         # print(overlap)
+#         print(positions[256])
 
-        MDD = 0
-        for eachPos in positions :
-            for eachOverlap in eachPos["overlapPos"]:
-                MDD += positions[eachOverlap]["drawdown"]
-            eachPos["overlapMDD"] = MDD
-            MDD = 0
+#         MDD = 0
+#         for eachPos in positions :
+#             for eachOverlap in eachPos["overlapPos"]:
+#                 MDD += positions[eachOverlap]["drawdown"]
+#             eachPos["overlapMDD"] = MDD
+#             MDD = 0
 
-        # for i, eachPos in enumerate(positions) :
-        #     print(f'{i}  {eachPos["overlapPos"]}')
-        #     pass
-
-        # for i in range(len(positions)-200):
-            # for j in range(len(positions)-200):
-                # print(overlap[i][j], end=",")
-            # print('\n')
-
-        return 0
+#         return 0
 
 
 if __name__ == "__main__":
