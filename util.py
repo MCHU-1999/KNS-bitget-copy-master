@@ -8,7 +8,7 @@ from time import sleep
 from datetime import datetime, timezone, timedelta
 import pymongo
 import statistics
-import tqdm
+import plot
 
 monthMap = {
     "01": "31",
@@ -64,7 +64,7 @@ async def copySimulate(traderId, margin = 10, lossPerPosition = 100, month = "20
                 # 手續費6%, 開倉平倉各付一次
                 fee = 0.0006 * margin * leverage * 2
                 if drawdown >= lossPerPosition :
-                    pnl = -1 * margin
+                    pnl = (-1 * lossPerPosition / 100) * margin
                     countSL += 1
                 else:
                     pnl = (margin * float(each["revenue"])/100) - fee
@@ -76,6 +76,18 @@ async def copySimulate(traderId, margin = 10, lossPerPosition = 100, month = "20
                 else:
                     pnlInDays[day] += pnl
                     copyProfit += pnl
+        # PLOT -------------------------------------
+        x = []
+        y = []
+        y.append(pnlInDays[0])
+        for i in range(int(lastday)):
+            x.append(i + 1)
+            if i == 0:
+                pass
+            else:
+                y.append(pnlInDays[i] + y[i - 1])
+        plot.plotLine(x, y, month.split('-')[1])
+        # ------------------------------------------
 
         return {
             "traderName": traderName,               # 交易員名稱
@@ -319,5 +331,17 @@ def calcMaxMDD(traderId):
 
 
 if __name__ == "__main__":
-    # copySimulate("2442813206")
-    print(analyzeTraderMDD("4876423973", 10000, 10, "2023-02"))
+    response = copySimulate("4876423973")
+    # print(response["pnlInDays"])
+    # print(response["copyProfit"])
+    x = []
+    y = []
+    y.append(response["pnlInDays"][0])
+    for i in range(len(response["pnlInDays"])):
+        x.append(i + 1)
+        if i == 0:
+            pass
+        else:
+            y.append(response["pnlInDays"][i] + y[i - 1])
+
+    # print(analyzeTraderMDD("4876423973", 10000, 10, "2023-02"))
