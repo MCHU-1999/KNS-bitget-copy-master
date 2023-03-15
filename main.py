@@ -25,9 +25,9 @@ class menuView(discord.ui.View):
     async def red(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(analyze())
 
-    @discord.ui.button(label='灰色的神秘按鈕', style=discord.ButtonStyle.grey, custom_id='persistent_view:grey')
+    @discord.ui.button(label='連線狀態測試', style=discord.ButtonStyle.grey, custom_id='persistent_view:grey')
     async def grey(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message('我是灰色', ephemeral=True)
+        await interaction.response.send_message("I'm ready!", ephemeral=True)
 
 
 class simulate(discord.ui.Modal, title='交易員實盤績效查詢&試算'):
@@ -53,6 +53,7 @@ class simulate(discord.ui.Modal, title='交易員實盤績效查詢&試算'):
         resData = await util.copySimulate(str(self.traderLink).split('?id=')[1], int(str(self.margin)), int(str(self.lossPerPos)), str(self.month))
         # print(resData)
         # print("交易員：" + resData["traderName"])
+        file = discord.File("./oneAndOnly.png", filename="image.png")
         embed = discord.Embed(
             title = str(self.month) + "月收益試算",
             type = "rich",
@@ -62,16 +63,15 @@ class simulate(discord.ui.Modal, title='交易員實盤績效查詢&試算'):
         .add_field(name="本金（每倉）", value=f'{ str(self.margin) }USDT')\
         .add_field(name="倉位", value=f'共{ resData["positionCount"] }倉')\
         .add_field(name=f"{ str(self.lossPerPos) }％止損", value=f'共觸發{ resData["countSL"] }次')\
-        .add_field(name="總收益（無爆倉）", value=f'{ resData["copyProfit"] }USDT', inline=False)
-        await interaction.response.send_message(embed = embed, ephemeral = True)
+        .add_field(name="總收益（無爆倉）", value=f'{ resData["copyProfit"] }USDT', inline=False)\
+        .set_image(url="attachment://image.png")
+        await interaction.response.send_message(file = file, embed = embed, ephemeral = True)
 
     async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
         await interaction.response.send_message('Oops! Something went wrong.', ephemeral = True)
         # Make sure we know what the error actually is
         traceback.print_exception(type(error), error, error.__traceback__)
-        # send error message to bot log channel
-        botLogChannel = self.get_channel(944846007051620404)
-        botLogChannel.send(f'{type(error)}{error}{error.__traceback__}')
+
 
 class analyze(discord.ui.Modal, title='交易員風險與回撤試算'):
     traderLink = discord.ui.TextInput(
@@ -131,9 +131,7 @@ class analyze(discord.ui.Modal, title='交易員風險與回撤試算'):
         await interaction.response.send_message('Oops! Something went wrong.', ephemeral = True)
         # Make sure we know what the error actually is
         traceback.print_exception(type(error), error, error.__traceback__)
-        # send error message to bot log channel
-        botLogChannel = self.get_channel(944846007051620404)
-        botLogChannel.send(f'{type(error)}{error}{error.__traceback__}')
+
 
 class CopyBot(discord.Client):
     def __init__(self):
@@ -152,9 +150,10 @@ class CopyBot(discord.Client):
         print(f'Logged in as {self.user} (ID: {self.user.id})')
         mainChannel = self.get_channel(914526949630693458)
         botLogChannel = self.get_channel(944846007051620404)
-        # msg = await channel.fetch_message(1085137357273043055)
-        # await msg.edit(content="What's your favourite colour?", view=PersistentView())
-        await mainChannel.send("Bitget 交易員分析 & 試算工具", view=menuView())
+        msg = await mainChannel.fetch_message(1085534223387078670)
+        await msg.edit(content="Bitget 交易員分析 & 試算工具", view=menuView())
+        # await mainChannel.send("Bitget 交易員分析 & 試算工具", view=menuView())
+        await botLogChannel.send("I'm ready!")
         print('ready------')
 
 bot = CopyBot()
