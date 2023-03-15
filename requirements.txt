@@ -1,0 +1,5 @@
+pymongo
+numpy
+matplotlib
+discord.py
+python-dotenv
