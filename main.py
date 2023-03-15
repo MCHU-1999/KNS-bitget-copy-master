@@ -25,9 +25,9 @@ class menuView(discord.ui.View):
     async def red(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(analyze())
 
-    # @discord.ui.button(label='Grey', style=discord.ButtonStyle.grey, custom_id='persistent_view:grey')
-    # async def grey(self, interaction: discord.Interaction, button: discord.ui.Button):
-    #     await interaction.response.send_message('This is grey.', ephemeral=True)
+    @discord.ui.button(label='灰色的神秘按鈕', style=discord.ButtonStyle.grey, custom_id='persistent_view:grey')
+    async def grey(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message('我是灰色', ephemeral=True)
 
 
 class simulate(discord.ui.Modal, title='交易員實盤績效查詢&試算'):
