@@ -24,33 +24,49 @@ monthMap = {
     "11": "30",
     "12": "31",
 }
+def dateNow():
+    dt1 = datetime.utcnow().replace(tzinfo=timezone.utc)
+    dt2 = dt1.astimezone(timezone(timedelta(hours=8)))
+    return dt2.strftime("%Y-%m-%d")
 
-def copySimulate(traderId, margin = 10, lossPerPosition = 100, month = "2023-02"):
+def timeNow():
+    dt1 = datetime.utcnow().replace(tzinfo=timezone.utc)
+    dt2 = dt1.astimezone(timezone(timedelta(hours=8)))
+    return dt2.strftime("%Y-%m-%d %H-%M-%S")
+
+# log txt file 
+def log(user, function):
+    path = './log.txt'
+    f = open(path, 'a', encoding='UTF-8')
+    print(f'time: {timeNow()}, user: {user}, function: {function}', file=f)
+    f.close()
+
+async def copySimulate(traderName, margin = 10, lossPerPosition = 100, startDate = "2023-02-01"):
     load_dotenv()
     client = pymongo.MongoClient(os.getenv('MONGODB'))
     drawdownDB = client.TraderDrawdown.traderDrawdown
-    lastday = monthMap[month.split('-')[1]]
-
-    traderData = drawdownDB.find({"traderId": traderId})
-    traderData = (list(traderData)[0])
-    # print(traderData)
+    # lastday = monthMap[month.split('-')[1]]
+    
+    traderData = drawdownDB.find({"traderName": traderName})
+    traderData = (list(traderData))
     if len(traderData) == 0 :
         hasDrawdownData = False
         # print('Cannot find trader data in DB.')
         return False
     else:
+        traderData = traderData[0]
         positionCount = 0
         suggestCapital = 0.00
-        # margin = 10
-        pnlInDays = np.zeros(int(lastday), dtype=float)
-        startTimestamp = int(time.mktime(time.strptime(f"{month}-01 00:00:00", "%Y-%m-%d %H:%M:%S"))) - 3600*8
-        endTimestamp = int(time.mktime(time.strptime(f"{month}-{lastday} 23:59:59", "%Y-%m-%d %H:%M:%S"))) - 3600*8
+        today = dateNow()
+        startTimestamp = int(time.mktime(time.strptime(f"{ startDate } 00:00:00", "%Y-%m-%d %H:%M:%S")))
+        endTimestamp = int(time.mktime(time.strptime(f"{ today } 23:59:59", "%Y-%m-%d %H:%M:%S")))
+        pnlInDays = np.zeros(int((endTimestamp-startTimestamp)/86400), dtype=float)
         traderShareRatio = 0.1
         totalTraderShare = 0.00
         copyProfit = 0.00
         hasDrawdownData = True
         history = traderData["history"]
-        traderName = traderData["traderName"]
+        traderId = traderData["traderId"]
         countSL = 0
 
         for each in history:
@@ -80,13 +96,13 @@ def copySimulate(traderId, margin = 10, lossPerPosition = 100, month = "2023-02"
         x = []
         y = []
         y.append(pnlInDays[0])
-        for i in range(int(lastday)):
+        for i in range(len(pnlInDays)):
             x.append(i + 1)
             if i == 0:
                 pass
             else:
                 y.append(pnlInDays[i] + y[i - 1])
-        filename = plot.plotLine(x, y, month.split('-')[1])
+        filename = plot.plotLine(x, y, startDate, today)
         # ------------------------------------------
 
         return {
@@ -124,29 +140,30 @@ def potentialExtremeMaxDrawdown(drawdownData, turns):
     return potentialMaxDrawdown
 
 
-def analyzeTraderMDD(traderId, initialCapital = 10000, maxLossPercent = 20, month = "2023-02"):
+async def analyzeTraderMDD(traderName, initialCapital = 10000, maxLossPercent = 20, startDate = "2023-02-01"):
     # Initialize
     load_dotenv()
     client = pymongo.MongoClient(os.getenv('MONGODB'))
     drawdownDB = client.TraderDrawdown.traderDrawdown
-    lastday = monthMap[month.split('-')[1]]
+    today = dateNow()
 
     hasDrawdownData = False
 
     # Query in drawdown DB
-    traderData = drawdownDB.find({"traderId": traderId})
-    traderData = (list(traderData)[0])
+    traderData = drawdownDB.find({"traderName": traderName})
+    traderData = (list(traderData))
     # print(traderData)
     if len(traderData) == 0 :
         hasDrawdownData = False
         # print('Cannot find trader data in DB.')
         return False
     else:
+        traderData = traderData[0]
         hasDrawdownData = True
-        startTimestamp = int(time.mktime(time.strptime(f"{month}-01 00:00:00", "%Y-%m-%d %H:%M:%S"))) - 3600*8
-        endTimestamp = int(time.mktime(time.strptime(f"{month}-{lastday} 23:59:59", "%Y-%m-%d %H:%M:%S"))) - 3600*8
+        startTimestamp = int(time.mktime(time.strptime(f"{ startDate } 00:00:00", "%Y-%m-%d %H:%M:%S")))
+        endTimestamp = int(time.mktime(time.strptime(f"{ today } 23:59:59", "%Y-%m-%d %H:%M:%S")))
         history = traderData["history"]
-        traderName = traderData["traderName"]
+        traderId = traderData["traderId"]
         drawdownData = []
         for each in history:
             openTimestamp = int(time.mktime(time.strptime(each["openDate"], "%Y-%m-%d %H:%M:%S")))
