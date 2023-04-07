@@ -4,3 +4,5 @@ matplotlib
 discord.py
 python-dotenv
 gunicorn
+flask
+requests

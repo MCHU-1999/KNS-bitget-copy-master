@@ -38,7 +38,7 @@ def timeNow():
 def log(user, function):
     path = './log.txt'
     f = open(path, 'a', encoding='UTF-8')
-    print(f'time: {timeNow()}, user: {user}, function: {function}', file=f)
+    print(f'time: {timeNow()}, user: {user}, {function}', file=f)
     f.close()
 
 async def copySimulate(traderName, margin = 10, lossPerPosition = 100, startDate = "2023-02-01"):

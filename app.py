@@ -8,6 +8,7 @@ import util
 import keep_alive
 import time
 
+
 load_dotenv() 
 token = os.getenv('TOKEN')
 app_id = os.getenv('APP_ID')
@@ -57,10 +58,12 @@ class simulate(discord.ui.Modal, title='交易員實盤績效查詢&試算'):
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.send_message("計算中...", ephemeral = True)
         userName = interaction.user
+        util.log(userName, f'績效試算({str(self.traderName)}, {str(self.margin)}, {str(self.lossPerPos)}, {str(self.startDate)})')
         resData = await util.copySimulate(str(self.traderName), int(str(self.margin)), int(str(self.lossPerPos)), str(self.startDate))
         # print(resData)
         if not resData:
             await interaction.edit_original_response(content="查無交易員資料")
+            util.log(userName, f'查無交易員資料')
         else: 
             file = discord.File(f'./{ resData["filename"] }', filename="image.png")
             embed = discord.Embed(
@@ -82,7 +85,6 @@ class simulate(discord.ui.Modal, title='交易員實盤績效查詢&試算'):
             else:
                 print("The file does not exist!")
             
-            util.log(userName, f'績效試算({str(self.traderName)}, {str(self.margin)}, {str(self.lossPerPos)}, {str(self.startDate)})')
 
     async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
         await interaction.edit_original_response(content='Oops! Something went wrong.')
@@ -111,10 +113,12 @@ class analyze(discord.ui.Modal, title='交易員風險與回撤試算'):
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.send_message("計算中...", ephemeral = True)
         userName = interaction.user
+        util.log(userName, f'風險試算({str(self.traderName)}, {str(self.initialCapital)}, {str(self.maxLossPercent)}, {str(self.startDate)})')
         resData = await util.analyzeTraderMDD(str(self.traderName), int(str(self.initialCapital)), int(str(self.maxLossPercent)), str(self.startDate))
         # print(resData)
         if not resData:
             await interaction.edit_original_response(content="查無交易員資料")
+            util.log(userName, f'查無交易員資料')
         else: 
             # print("交易員：" + resData["traderName"])
             period = f'{ str(self.startDate) } -> { util.dateNow() }'
@@ -148,7 +152,6 @@ class analyze(discord.ui.Modal, title='交易員風險與回撤試算'):
             .add_field(name="※建議安全總倉數", value="持倉數平均值 + 2 × 持倉數標準差 (包含 95% 事件)", inline=False)\
             .add_field(name="※風報比", value="收益 ÷ 最大浮動虧損", inline=False)
             await interaction.edit_original_response(content="計算完成：", embed = embed)
-            util.log(userName, f'風險試算({str(self.traderName)}, {str(self.initialCapital)}, {str(self.maxLossPercent)}, {str(self.startDate)})')
 
 
     async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
