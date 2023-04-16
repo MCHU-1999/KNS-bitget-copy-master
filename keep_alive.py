@@ -19,7 +19,7 @@ def keep_alive():
     server.start()
 
 
-@app.route("/calcAPI", methods=['POST']) 
-def copySimulate():
-    data = json.loads(request.data)
-    print(data)
+# @app.route("/calcAPI", methods=['POST']) 
+# def copySimulate():
+#     data = json.loads(request.data)
+#     print(data)
