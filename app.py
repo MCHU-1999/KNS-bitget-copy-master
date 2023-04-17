@@ -5,11 +5,16 @@ from discord.ext import commands
 from discord import app_commands
 import traceback
 import util
+import plot
 import keep_alive
+import requests
 import time
+import json
 
 
-load_dotenv() 
+load_dotenv()
+backend_url = os.getenv('BACKEND_URL')
+api_password = os.getenv('API_PASSWORD')
 token = os.getenv('TOKEN')
 app_id = os.getenv('APP_ID')
 guild_id = os.getenv('GUILD_ID')
@@ -51,21 +56,40 @@ class simulate(discord.ui.Modal, title='交易員實盤績效查詢&試算'):
         placeholder = '自訂倉位止損（％）ex:100'
     )
     startDate = discord.ui.TextInput(
-        label = '起始時間（計算自起始時間至當前時間）',
-        placeholder = '輸入『西元年-月份』ex:2022-09-01'
+        label = '試算起始時間',
+        placeholder = '輸入『西元年-月份-日期』ex:2023-02-01'
+    )
+    endDate = discord.ui.TextInput(
+        label = '試算結束時間',
+        placeholder = '輸入『西元年-月份-日期』ex:2023-04-01'
     )
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.send_message("計算中...", ephemeral = True)
         userName = interaction.user
-        util.log(userName, f'績效試算({str(self.traderName)}, {str(self.margin)}, {str(self.lossPerPos)}, {str(self.startDate)})')
-        resData = await util.copySimulate(str(self.traderName), int(str(self.margin)), int(str(self.lossPerPos)), str(self.startDate))
-        # print(resData)
+        util.log(userName, f'績效試算({str(self.traderName)}, {str(self.margin)}, {str(self.lossPerPos)}, {str(self.startDate)}, {str(self.endDate)})')
+        # resData = await util.copySimulate(str(self.traderName), int(str(self.margin)), int(str(self.lossPerPos)), str(self.startDate))
+        payload = {
+            "trader": str(self.traderName),
+            "startDate": str(self.startDate),
+            "endDate": str(self.endDate),
+            "margin": int(str(self.margin)),
+            "stoploss": int(str(self.lossPerPos)),
+        }
+        header = {
+            "password": api_password,
+        }
+        response = requests.post(url=f'{backend_url}/calculate/DC/copySimulate', headers=header, json=payload)
+        resData = response.json()
+        resData = resData["data"]
+        # print(f'type: {type(resData)}')
+        # print(resData.keys())
         if not resData:
             await interaction.edit_original_response(content="查無交易員資料")
             util.log(userName, f'查無交易員資料')
         else: 
-            file = discord.File(f'./{ resData["filename"] }', filename="image.png")
+            filename = plot.plotLine(resData["chartX"], resData["chartY"], str(self.startDate), str(self.endDate))
+            file = discord.File(f'./{ filename }', filename="image.png")
             embed = discord.Embed(
                 title = f'{ str(self.startDate) } -> { util.dateNow() } 跟單試算',
                 type = "rich",
@@ -79,15 +103,15 @@ class simulate(discord.ui.Modal, title='交易員實盤績效查詢&試算'):
             .set_image(url="attachment://image.png")
 
             await interaction.edit_original_response(content="計算完成：", attachments = [file], embed = embed)
-            if os.path.exists(f'{ resData["filename"] }'):
-                os.remove(f'{ resData["filename"] }')
-                print(f'{ resData["filename"] } deleted.')
+            if os.path.exists(f'{ filename }'):
+                os.remove(f'{ filename }')
+                print(f'{ filename } deleted.')
             else:
                 print("The file does not exist!")
             
 
     async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
-        await interaction.edit_original_response(content='Oops! Something went wrong.')
+        await interaction.edit_original_response(content='發生錯誤，請稍候再試一次。')
         # Make sure we know what the error actually is
         traceback.print_exception(type(error), error, error.__traceback__)  
 
@@ -106,16 +130,34 @@ class analyze(discord.ui.Modal, title='交易員風險與回撤試算'):
         placeholder = '可承受之最大回撤（％）ex:20'
     )
     startDate = discord.ui.TextInput(
-        label = '起始時間（計算自起始時間至當前時間）',
-        placeholder = '輸入『西元年-月份』ex:2022-09-01'
+        label = '試算起始時間',
+        placeholder = '輸入『西元年-月份-日期』ex:2023-02-01'
+    )
+    endDate = discord.ui.TextInput(
+        label = '試算結束時間',
+        placeholder = '輸入『西元年-月份-日期』ex:2023-04-01'
     )
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.send_message("計算中...", ephemeral = True)
         userName = interaction.user
-        util.log(userName, f'風險試算({str(self.traderName)}, {str(self.initialCapital)}, {str(self.maxLossPercent)}, {str(self.startDate)})')
+        util.log(userName, f'風險試算({str(self.traderName)}, {str(self.initialCapital)}, {str(self.maxLossPercent)}, {str(self.startDate)}, {str(self.endDate)})')
         resData = await util.analyzeTraderMDD(str(self.traderName), int(str(self.initialCapital)), int(str(self.maxLossPercent)), str(self.startDate))
-        # print(resData)
+        payload = {
+            "trader": str(self.traderName),
+            "startDate": str(self.startDate),
+            "endDate": str(self.endDate),
+            "capital": str(self.initialCapital),
+            "maxLoss": str(self.maxLossPercent),
+        }
+        header = {
+            "password": api_password,
+        }
+        response = requests.post(url=f'{backend_url}/calculate/DC/analyzeMDD', headers=header, json=payload)
+        resData = response.json()
+        resData = resData["data"]
+        # print(f'type: {type(resData)}')
+        # print(resData.keys())        
         if not resData:
             await interaction.edit_original_response(content="查無交易員資料")
             util.log(userName, f'查無交易員資料')
@@ -155,7 +197,7 @@ class analyze(discord.ui.Modal, title='交易員風險與回撤試算'):
 
 
     async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
-        await interaction.edit_original_response(content='Oops! Something went wrong.')
+        await interaction.edit_original_response(content='發生錯誤，請稍候再試一次。')
         # Make sure we know what the error actually is
         traceback.print_exception(type(error), error, error.__traceback__)
 

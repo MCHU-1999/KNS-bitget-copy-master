@@ -104,6 +104,8 @@ async def copySimulate(traderName, margin = 10, lossPerPosition = 100, startDate
                 y.append(pnlInDays[i] + y[i - 1])
         filename = plot.plotLine(x, y, startDate, today)
         # ------------------------------------------
+        
+        client.close()
 
         return {
             "traderName": traderName,               # 交易員名稱
@@ -170,6 +172,8 @@ async def analyzeTraderMDD(traderName, initialCapital = 10000, maxLossPercent = 
             closeTimestamp = int(time.mktime(time.strptime(each["closeDate"], "%Y-%m-%d %H:%M:%S")))
             if startTimestamp <= openTimestamp and closeTimestamp <= endTimestamp:
                 drawdownData.append(each)
+        
+        client.close()
 
         # Round
         turns = []
